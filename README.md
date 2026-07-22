@@ -363,7 +363,7 @@ For issues or questions:
 
 ## 📞 Contact
 
-For inquiries, please contact: [Your Contact Info]
+For inquiries, please contact: [amey.dongre2005@gmail.com]
 
 ---
 
