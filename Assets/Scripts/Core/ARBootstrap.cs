@@ -23,6 +23,9 @@ public class ARBootstrap : MonoBehaviour
         }
 
         DontDestroyOnLoad(gameObject);
+
+        // Establish the manager before scene Start callbacks can use it.
+        InitializeApplication();
     }
 
     private void Start()
@@ -35,7 +38,6 @@ public class ARBootstrap : MonoBehaviour
             return;
         }
 
-        InitializeApplication();
         SetupDebugTools();
     }
 
@@ -63,13 +65,25 @@ public class ARBootstrap : MonoBehaviour
     /// </summary>
     private void InitializeApplication()
     {
-        // Create AR Manager
-        GameObject arManagerGO = new GameObject("ARManager");
-        arManager = arManagerGO.AddComponent<ARManager>();
+        if (ARManager.Instance == null)
+        {
+            GameObject arManagerGO = new GameObject("ARManager");
+            arManager = arManagerGO.AddComponent<ARManager>();
+        }
+        else
+        {
+            arManager = ARManager.Instance;
+        }
 
-        // Create Camera Setup
-        GameObject cameraSetupGO = new GameObject("ARCameraSetup");
-        cameraSetup = cameraSetupGO.AddComponent<ARCameraSetup>();
+        if (FindObjectOfType<ARCameraSetup>() == null)
+        {
+            GameObject cameraSetupGO = new GameObject("ARCameraSetup");
+            cameraSetup = cameraSetupGO.AddComponent<ARCameraSetup>();
+        }
+        else
+        {
+            cameraSetup = FindObjectOfType<ARCameraSetup>();
+        }
 
         // Set application settings
         QualitySettings.vSyncCount = 1;
@@ -109,14 +123,12 @@ public class ARBootstrap : MonoBehaviour
 
         if (Input.GetKeyDown(KeyCode.C))
         {
-            Vector3 spawnPos = Camera.main.transform.position + Camera.main.transform.forward * 2f;
-            ARManager.Instance.CreateARObject(spawnPos, "Cube");
+            CreateAtCamera("Cube");
         }
 
         if (Input.GetKeyDown(KeyCode.S))
         {
-            Vector3 spawnPos = Camera.main.transform.position + Camera.main.transform.forward * 2f;
-            ARManager.Instance.CreateARObject(spawnPos, "Sphere");
+            CreateAtCamera("Sphere");
         }
 
         if (Input.GetKeyDown(KeyCode.P))
@@ -141,6 +153,25 @@ public class ARBootstrap : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.Delete))
         {
             ARManager.Instance.ClearScene();
+        }
+    }
+
+    private void CreateAtCamera(string modelType)
+    {
+        if (Camera.main == null || ARManager.Instance == null)
+        {
+            Debug.LogWarning("Cannot create object: AR camera or manager is unavailable.");
+            return;
+        }
+
+        Vector3 screenCenter = new Vector3(Screen.width * 0.5f, Screen.height * 0.5f, 0f);
+        if (ARUtils.ScreenToWorldPointAR(screenCenter, out Vector3 position))
+        {
+            ARManager.Instance.CreateARObject(position, modelType);
+        }
+        else
+        {
+            Debug.LogWarning("Cannot place object until a tracked surface is detected.");
         }
     }
 
@@ -231,8 +262,9 @@ public class SceneInitializer : MonoBehaviour
     {
         Debug.Log("Initializing AR Scene...");
 
-        // Ensure AR Manager exists
-        if (FindObjectOfType<ARManager>() == null)
+        // Create a bootstrap before scene Awake/Start callbacks. The bootstrap
+        // creates the manager in Awake, so dependent scene scripts see it in time.
+        if (FindObjectOfType<ARBootstrap>() == null)
         {
             GameObject bootstrapGO = new GameObject("ARBootstrap");
             bootstrapGO.AddComponent<ARBootstrap>();

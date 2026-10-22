@@ -110,9 +110,9 @@ public class ARCameraSetup : MonoBehaviour
     /// </summary>
     public static bool IsARSupported()
     {
-        return SystemInfo.supportsRayTracing || 
-               (Application.platform == RuntimePlatform.Android || 
-                Application.platform == RuntimePlatform.IPhonePlayer);
+        // ARSession.state may still be None/CheckingAvailability during startup.
+        // Only report true once a provider has actually initialized tracking.
+        return ARSession.state == ARSessionState.Ready || ARSession.state == ARSessionState.SessionTracking;
     }
 
     /// <summary>
@@ -184,7 +184,9 @@ public class ARPlaneInteraction : MonoBehaviour
 
         foreach (ARPlane plane in planeManager.trackables)
         {
-            plane.GetComponent<Renderer>().enabled = visible;
+            Renderer planeRenderer = plane.GetComponent<Renderer>();
+            if (planeRenderer != null)
+                planeRenderer.enabled = visible;
         }
     }
 
@@ -195,14 +197,16 @@ public class ARPlaneInteraction : MonoBehaviour
     {
         worldPosition = Vector3.zero;
 
-        if (planeManager == null)
+        Camera camera = Camera.main;
+        if (planeManager == null || camera == null)
             return false;
 
-        Ray ray = Camera.main.ScreenPointToRay(screenPosition);
+        Ray ray = camera.ScreenPointToRay(screenPosition);
 
         foreach (ARPlane plane in planeManager.trackables)
         {
-            if (plane.GetComponent<Collider>().Raycast(ray, out RaycastHit hit, 1000))
+            Collider planeCollider = plane.GetComponent<Collider>();
+            if (planeCollider != null && planeCollider.Raycast(ray, out RaycastHit hit, 1000f))
             {
                 worldPosition = hit.point;
                 return true;
@@ -231,16 +235,15 @@ public static class ARUtils
 
         Ray ray = camera.ScreenPointToRay(screenPosition);
 
-        // Try to hit any AR plane or object
+        // Only return a location when an actual collider (including a generated
+        // AR plane collider) was hit. Never report arbitrary space as valid placement.
         if (Physics.Raycast(ray, out RaycastHit hit))
         {
             worldPosition = hit.point;
             return true;
         }
 
-        // Fallback: place at fixed distance from camera
-        worldPosition = ray.origin + ray.direction * 2f;
-        return true;
+        return false;
     }
 
     /// <summary>

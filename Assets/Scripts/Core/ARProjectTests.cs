@@ -286,6 +286,57 @@ public class ARProjectTests
 }
 
 /// <summary>
+/// Regression coverage for AR placement failure behavior.
+/// </summary>
+public class ARPlacementRegressionTests
+{
+    private GameObject cameraObject;
+
+    [SetUp]
+    public void SetUp()
+    {
+        cameraObject = new GameObject("PlacementTestCamera");
+        cameraObject.tag = "MainCamera";
+        cameraObject.AddComponent<Camera>();
+    }
+
+    [TearDown]
+    public void TearDown()
+    {
+        Object.DestroyImmediate(cameraObject);
+    }
+
+    [Test]
+    public void ScreenToWorldPointReturnsFalseWhenNoSurfaceIsHit()
+    {
+        Vector3 position;
+        bool placed = ARUtils.ScreenToWorldPointAR(new Vector2(Screen.width / 2f, Screen.height / 2f), out position);
+
+        Assert.IsFalse(placed);
+        Assert.AreEqual(Vector3.zero, position);
+    }
+
+    [Test]
+    public void ScreenToWorldPointReturnsHitWhenColliderIsPresent()
+    {
+        GameObject target = GameObject.CreatePrimitive(PrimitiveType.Cube);
+        target.transform.position = new Vector3(0f, 0f, 5f);
+        try
+        {
+            Physics.SyncTransforms();
+            bool placed = ARUtils.ScreenToWorldPointAR(new Vector2(Screen.width / 2f, Screen.height / 2f), out Vector3 position);
+
+            Assert.IsTrue(placed);
+            Assert.That(position.z, Is.GreaterThan(0f));
+        }
+        finally
+        {
+            Object.DestroyImmediate(target);
+        }
+    }
+}
+
+/// <summary>
 /// Performance benchmark tests
 /// </summary>
 public class ARPerformanceBenchmarks
