@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.XR.ARFoundation;
+using UnityEngine.XR.ARSubsystems;
 
 /// <summary>
 /// Configures AR Foundation for mobile AR (ARCore/ARKit)
@@ -10,7 +11,6 @@ public class ARCameraSetup : MonoBehaviour
     [SerializeField] private ARSession arSession;
     [SerializeField] private ARCameraManager arCameraManager;
     [SerializeField] private ARPlaneManager arPlaneManager;
-    [SerializeField] private ARLightEstimationManager arLightManager;
 
     [SerializeField] private bool enablePlaneDetection = true;
     [SerializeField] private bool enableLightEstimation = true;
@@ -66,19 +66,7 @@ public class ARCameraSetup : MonoBehaviour
             }
         }
 
-        // Setup Light Estimation
-        if (enableLightEstimation)
-        {
-            if (arLightManager == null)
-            {
-                arLightManager = FindObjectOfType<ARLightEstimationManager>();
-            }
-
-            if (arLightManager != null)
-            {
-                Debug.Log("Light estimation enabled");
-            }
-        }
+        ConfigureLightEstimation();
 
         Debug.Log("AR components setup complete");
     }
@@ -131,10 +119,18 @@ public class ARCameraSetup : MonoBehaviour
     /// </summary>
     public void SetLightEstimation(bool enabled)
     {
-        if (arLightManager != null)
-        {
-            arLightManager.enabled = enabled;
-        }
+        enableLightEstimation = enabled;
+        ConfigureLightEstimation();
+    }
+
+    private void ConfigureLightEstimation()
+    {
+        if (arCameraManager == null)
+            return;
+
+        arCameraManager.requestedLightEstimation = enableLightEstimation
+            ? (LightEstimation.AmbientIntensity | LightEstimation.AmbientColor)
+            : LightEstimation.None;
     }
 
     /// <summary>
