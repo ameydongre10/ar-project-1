@@ -1,0 +1,26 @@
+name: Unity validation
+
+on:
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  project-integrity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+      - name: Validate Unity project metadata
+        shell: bash
+        run: |
+          test -f ProjectSettings/ProjectVersion.txt
+          test -f Packages/manifest.json
+          python3 -m json.tool Packages/manifest.json >/dev/null
+          grep -q 'm_EditorVersion: 6000.4.3f1' ProjectSettings/ProjectVersion.txt
+          test -f 'Assets/Scenes/ar project.unity'
+          echo 'Project metadata and primary scene are present.'
+
+# Actual Unity compilation and Test Runner execution require a Unity Editor
+# installation and licensing; see docs/TEST_REPORT.md for local batch commands.
