@@ -17,6 +17,8 @@ Added tests in `Assets/Scripts/Core/ARProjectTests.cs` for placement returning f
 
 Follow-up compile-error repair: removed the obsolete/nonexistent `ARLightEstimationManager` reference for AR Foundation 6.4.3 and uses `ARCameraManager.requestedLightEstimation`. Removed `[Performance]` benchmark methods that depended on unavailable Performance Test APIs in the project assembly. Unity compilation remains unverified here.
 
+Additional Safe Mode repair: migrated plane configuration to AR Foundation 6's `PlaneDetectionMode` and `ARPlaneManager.requestedDetectionMode` API. This also remains uncompiled in this environment.
+
 The replacement GitHub workflow checks project version, manifest JSON, and primary scene presence. It does not claim to compile Unity scripts.
 
 ## Manual Unity validation checklist

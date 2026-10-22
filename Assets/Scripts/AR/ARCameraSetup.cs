@@ -14,7 +14,7 @@ public class ARCameraSetup : MonoBehaviour
 
     [SerializeField] private bool enablePlaneDetection = true;
     [SerializeField] private bool enableLightEstimation = true;
-    [SerializeField] private ARPlaneManager.DetectionMode planeDetectionMode = ARPlaneManager.DetectionMode.Horizontal;
+    [SerializeField] private PlaneDetectionMode planeDetectionMode = PlaneDetectionMode.Horizontal;
 
     private Camera mainCamera;
 
@@ -61,7 +61,7 @@ public class ARCameraSetup : MonoBehaviour
 
             if (arPlaneManager != null)
             {
-                arPlaneManager.detectionMode = planeDetectionMode;
+                arPlaneManager.requestedDetectionMode = planeDetectionMode;
                 Debug.Log($"Plane detection enabled: {planeDetectionMode}");
             }
         }
