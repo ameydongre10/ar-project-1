@@ -1,6 +1,32 @@
 # AR Glasses — Unity Mobile AR
 
-A Unity AR Foundation mobile application for Android (ARCore) and iOS (ARKit), with runtime primitive placement, local scene persistence, gestures, and experimental networking systems. This is a Unity project, not a WebXR application. Collaboration/cloud functionality requires a compatible network service and is not configured by default.
+A Unity AR Foundation mobile application for Android (ARCore) and iOS (ARKit), with runtime primitive placement, local scene persistence, gestures, and experimental networking systems, accompanied by an interactive **3D Hardware Monograph & WebGL Studio** built with React, Three.js, and TypeScript in `web/`.
+
+---
+
+## 🌐 AR-1 Interactive 3D Web Monograph
+
+The repository includes a digital flagship and spatial computing monograph in the `web/` directory.
+
+### Quick Start (Web Studio)
+```bash
+# From project root
+npm run dev
+
+# Or directly in web/
+cd web
+npm run dev
+```
+
+### Web Showcase Features
+- 🕶️ **Interactive 3D Spatial Canvas**: Real-time WebGL studio rendering the 5 Unity primitives (Cube, Sphere, Cylinder, Capsule, Plane) with PBR materials (Titanium, Optical Glass, Matte, Phosphor, Wireframe).
+- 🔬 **Hardware CAD Exploded View**: Interactive 3D monograph of the AR-1 headset with an explosion-factor slider and deep optical specifications (Waveguide, Micro-OLED 4K, 6-DoF SLAM).
+- 🖐️ **Gesture Laboratory**: Capacitive touch trackpad simulating `InputGestureSystem.cs` (SingleTap, DoubleTap, LongPress, Pinch, Rotate, Swipe) with live telemetry logging that directly updates the 3D studio.
+- 💾 **Scene Persistence & Schema Bridge**: Save/load environment presets, real-time JSON export/import conforming to Unity JSON serialization.
+- 📡 **Multiplayer Network Telemetry**: Live packet waterfall demonstrating LAN UDP multicast vs. Cloud Relay, delta compression, and multi-device state syncing matching `NetworkingSyncSystem.cs`.
+- 📐 **System Architecture Map**: Interactive codebase blueprint exploring the core C# subsystem roles and contracts.
+
+---
 
 ## ✨ Features
 

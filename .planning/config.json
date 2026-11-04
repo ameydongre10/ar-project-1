@@ -1,0 +1,12 @@
+{
+  "project_name": "ar-project-1-web",
+  "workflow": "gsd",
+  "archetype": "Interactive 3D Canvas & Hardware Monograph",
+  "stack": {
+    "framework": "react-vite-ts",
+    "styling": "tailwind",
+    "3d": "three-r3f-drei",
+    "icons": "lucide-react"
+  },
+  "created_at": "2026-11-05"
+}
