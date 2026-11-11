@@ -127,28 +127,39 @@ export const QuestXRModal: React.FC = () => {
 
 export const QuestXRButton: React.FC<{ variant?: 'hero' | 'toolbar' | 'stage' }> = ({ variant = 'stage' }) => {
   const { isXRPresenting, enterQuestXR, exitQuestXR, isXRSupported } = useAR();
+  const [connecting, setConnecting] = useState(false);
 
-  const handleClick = () => {
+  const handleClick = async () => {
     if (isXRPresenting) {
-      exitQuestXR();
+      await exitQuestXR();
     } else {
-      enterQuestXR();
+      setConnecting(true);
+      try {
+        await enterQuestXR();
+      } finally {
+        setConnecting(false);
+      }
     }
   };
+
+  const label = connecting ? 'STARTING VR/AR...' : isXRPresenting ? 'EXIT PASSTHROUGH' : 'ENTER QUEST AR';
 
   if (variant === 'hero') {
     return (
       <button
         onClick={handleClick}
+        disabled={connecting}
         className={`btn-tactile px-5 py-3 rounded-xl text-xs font-mono font-bold tracking-wider uppercase flex items-center gap-2.5 shadow-optical transition-all duration-200 ${
           isXRPresenting
             ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40 hover:bg-rose-500/30'
+            : connecting
+            ? 'bg-obsidian-800 text-titanium-400 border border-obsidian-700 animate-pulse'
             : 'bg-phosphor-teal text-obsidian-950 hover:brightness-110 shadow-phosphor-glow'
         }`}
       >
         <Headset className="w-4 h-4" />
-        <span>{isXRPresenting ? 'EXIT PASSTHROUGH' : 'ENTER QUEST AR'}</span>
-        {!isXRPresenting && (
+        <span>{label}</span>
+        {!isXRPresenting && !connecting && (
           <span className="w-2 h-2 rounded-full bg-obsidian-950 animate-ping" />
         )}
       </button>
@@ -159,15 +170,18 @@ export const QuestXRButton: React.FC<{ variant?: 'hero' | 'toolbar' | 'stage' }>
     return (
       <button
         onClick={handleClick}
+        disabled={connecting}
         title={isXRPresenting ? 'Exit WebXR Passthrough' : 'Enter Meta Quest Mixed Reality AR'}
         className={`btn-tactile flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-mono transition-all border ${
           isXRPresenting
             ? 'bg-rose-950/80 border-rose-500/50 text-rose-300'
+            : connecting
+            ? 'bg-obsidian-800 border-obsidian-700 text-titanium-400'
             : 'bg-obsidian-900/90 border-phosphor-teal/40 text-phosphor-teal hover:bg-phosphor-teal/15 hover:border-phosphor-teal shadow-phosphor-glow'
         }`}
       >
         <Headset className="w-4 h-4" />
-        <span className="font-semibold">{isXRPresenting ? 'EXIT AR' : 'QUEST AR'}</span>
+        <span className="font-semibold">{connecting ? 'STARTING...' : isXRPresenting ? 'EXIT AR' : 'QUEST AR'}</span>
       </button>
     );
   }
@@ -176,15 +190,18 @@ export const QuestXRButton: React.FC<{ variant?: 'hero' | 'toolbar' | 'stage' }>
   return (
     <button
       onClick={handleClick}
+      disabled={connecting}
       className={`btn-tactile flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-mono font-bold uppercase tracking-wider transition-all border ${
         isXRPresenting
           ? 'bg-rose-950/90 border-rose-500/60 text-rose-300 hover:bg-rose-900'
+          : connecting
+          ? 'bg-obsidian-800 border-obsidian-700 text-titanium-400'
           : 'bg-emerald-500/15 border-phosphor-teal/50 text-phosphor-teal hover:bg-phosphor-teal/25 hover:border-phosphor-teal shadow-phosphor-glow'
       }`}
     >
       <Headset className="w-4 h-4" />
-      <span>{isXRPresenting ? 'EXIT PASSTHROUGH' : 'ENTER QUEST AR'}</span>
-      <span className="w-1.5 h-1.5 rounded-full bg-phosphor-teal animate-pulse" />
+      <span>{label}</span>
+      <span className={`w-1.5 h-1.5 rounded-full ${connecting ? 'bg-amber-400 animate-spin' : 'bg-phosphor-teal animate-pulse'}`} />
     </button>
   );
 };

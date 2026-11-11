@@ -185,6 +185,42 @@ const PrimitiveMesh: React.FC<{
   );
 };
 
+// Three.js Controller Laser Beams for Meta Quest Touch Controllers
+const XRControllerRays: React.FC = () => {
+  const { isXRPresenting, xrRenderer } = useAR();
+
+  React.useEffect(() => {
+    if (!xrRenderer || !isXRPresenting) return;
+    const controllers: THREE.Group[] = [];
+    const lines: THREE.Line[] = [];
+
+    for (let i = 0; i < 2; i++) {
+      const controller = xrRenderer.xr.getController(i);
+      const geom = new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(0, 0, 0),
+        new THREE.Vector3(0, 0, -2.5)
+      ]);
+      const mat = new THREE.LineBasicMaterial({
+        color: 0x00f5d4,
+        transparent: true,
+        opacity: 0.85
+      });
+      const line = new THREE.Line(geom, mat);
+      controller.add(line);
+      controllers.push(controller);
+      lines.push(line);
+    }
+
+    return () => {
+      controllers.forEach((c, idx) => {
+        c.remove(lines[idx]);
+      });
+    };
+  }, [xrRenderer, isXRPresenting]);
+
+  return null;
+};
+
 export const Studio3D: React.FC = () => {
   const {
     primitives,
@@ -200,7 +236,11 @@ export const Studio3D: React.FC = () => {
     <div className="w-full h-full relative select-none">
       <Canvas
         camera={{ position: [3.8, 3.2, 4.2], fov: 42 }}
-        gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
+        gl={{
+          antialias: true,
+          alpha: true,
+          powerPreference: 'high-performance'
+        }}
         shadows
         onCreated={({ gl }) => {
           gl.xr.enabled = true;
@@ -208,6 +248,9 @@ export const Studio3D: React.FC = () => {
         }}
         onPointerMissed={() => selectPrimitive(null)}
       >
+        {/* Meta Quest Controller Laser Rays */}
+        <XRControllerRays />
+
         {/* Calibrated Optical Studio Lighting */}
         <ambientLight intensity={isXRPresenting ? 0.8 : 0.4} />
         <directionalLight

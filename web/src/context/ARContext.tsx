@@ -314,16 +314,40 @@ export const ARProvider: React.FC<{ children: React.ReactNode }> = ({ children }
       return;
     }
 
-    if (!xrRenderer) {
-      setXRErrorMessage('Initializing 3D spatial canvas. Please tap again in 1 second.');
+    const xr = (navigator as any).xr;
+
+    // Await renderer initialization if clicked immediately upon load
+    let renderer = xrRenderer;
+    if (!renderer) {
+      for (let i = 0; i < 8; i++) {
+        await new Promise((r) => setTimeout(r, 200));
+        if (xrRenderer) {
+          renderer = xrRenderer;
+          break;
+        }
+      }
+    }
+
+    if (!renderer) {
+      setXRErrorMessage('Initializing 3D spatial studio canvas. Please tap again in 1 second.');
+      setShowQuestModal(true);
       return;
     }
 
-    const xr = (navigator as any).xr;
-
     try {
       setXRErrorMessage(null);
-      xrRenderer.xr.enabled = true;
+
+      // WebGL context XR compatibility check
+      const gl = renderer.getContext();
+      if (gl && typeof (gl as any).makeXRCompatible === 'function') {
+        try {
+          await (gl as any).makeXRCompatible();
+        } catch (compatErr) {
+          console.warn('makeXRCompatible warning:', compatErr);
+        }
+      }
+
+      renderer.xr.enabled = true;
 
       const arSupported = await xr.isSessionSupported('immersive-ar').catch(() => false);
       const vrSupported = await xr.isSessionSupported('immersive-vr').catch(() => false);
@@ -334,37 +358,50 @@ export const ARProvider: React.FC<{ children: React.ReactNode }> = ({ children }
       }
 
       const mode = arSupported ? 'immersive-ar' : 'immersive-vr';
+
+      // Three.js r174 uses XRWebGLBinding which strictly requires 'layers' in optionalFeatures
       const sessionInit = {
-        optionalFeatures: ['local-floor', 'bounded-floor', 'hand-tracking']
+        optionalFeatures: [
+          'local-floor',
+          'bounded-floor',
+          'layers',
+          'hand-tracking',
+          'hit-test'
+        ]
       };
 
       const session = await xr.requestSession(mode, sessionInit);
 
       if (mode === 'immersive-ar') {
-        xrRenderer.setClearColor(0x000000, 0);
+        renderer.setClearColor(0x000000, 0);
       }
 
+      // Configure reference space with robust fallback (local-floor -> local)
       try {
-        await xrRenderer.xr.setReferenceSpaceType('local-floor');
-      } catch {
+        renderer.xr.setReferenceSpaceType('local-floor');
+        await renderer.xr.setSession(session);
+      } catch (floorErr) {
+        console.warn('local-floor reference space failed, retrying with local:', floorErr);
         try {
-          await xrRenderer.xr.setReferenceSpaceType('local');
-        } catch (refErr) {
-          console.warn('Reference space fallback:', refErr);
+          renderer.xr.setReferenceSpaceType('local');
+          await renderer.xr.setSession(session);
+        } catch (localErr) {
+          console.error('Fatal setSession error:', localErr);
+          session.end().catch(console.warn);
+          throw localErr;
         }
       }
 
       const onSessionEnded = () => {
         setIsXRPresenting(false);
         setActiveXRSession(null);
-        if (xrRenderer) {
-          xrRenderer.setClearColor(0x000000, 0);
+        if (renderer) {
+          renderer.setClearColor(0x000000, 0);
         }
         session.removeEventListener('end', onSessionEnded);
       };
 
       session.addEventListener('end', onSessionEnded);
-      await xrRenderer.xr.setSession(session);
       setActiveXRSession(session);
       setIsXRPresenting(true);
     } catch (err: any) {
