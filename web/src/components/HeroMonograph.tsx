@@ -12,6 +12,7 @@ import {
 import { Studio3D } from './SpatialCanvas/Studio3D';
 import { PrimitiveToolbar } from './SpatialCanvas/PrimitiveToolbar';
 import { ObjectInspector } from './SpatialCanvas/ObjectInspector';
+import { QuestXRButton } from './SpatialCanvas/QuestXRControls';
 
 export const HeroMonograph: React.FC = () => {
   const scrollTo = (id: string) => {
@@ -58,11 +59,13 @@ export const HeroMonograph: React.FC = () => {
 
             {/* Quick Action Navigation Pills */}
             <div className="mt-8 flex flex-wrap items-center gap-3">
+              <QuestXRButton variant="hero" />
+
               <button
                 onClick={() => scrollTo('studio-viewport')}
-                className="btn-tactile px-5 py-3 rounded-xl bg-phosphor-teal text-obsidian-950 text-xs font-mono font-bold tracking-wider uppercase hover:brightness-110 flex items-center gap-2 shadow-optical"
+                className="btn-tactile px-5 py-3 rounded-xl surface-monograph text-white text-xs font-mono font-bold tracking-wider uppercase hover:bg-obsidian-800 border-hairline flex items-center gap-2 shadow-optical"
               >
-                <Box className="w-4 h-4" />
+                <Box className="w-4 h-4 text-phosphor-teal" />
                 <span>SPATIAL STUDIO</span>
               </button>
 
@@ -135,8 +138,9 @@ export const HeroMonograph: React.FC = () => {
                 ORBIT: LEFT-CLICK &bull; PAN: RIGHT-CLICK &bull; ZOOM: WHEEL
               </span>
             </div>
-            <div className="flex items-center gap-2 text-xs font-mono text-titanium-400">
-              <span className="tabular-data text-phosphor-teal font-medium">SHADERS ACTIVE</span>
+            <div className="flex items-center gap-3 text-xs font-mono">
+              <span className="hidden sm:inline-block tabular-data text-phosphor-teal font-medium">SHADERS ACTIVE</span>
+              <QuestXRButton variant="stage" />
             </div>
           </div>
 

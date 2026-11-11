@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import * as THREE from 'three';
 import { ARPrimitive, PrimitiveType, MaterialType, GestureTelemetry, GestureType, NetworkPacket, NetworkSyncMode, ARScenePreset } from '../types/ar';
 
 interface ARContextType {
@@ -38,6 +39,19 @@ interface ARContextType {
   networkPackets: NetworkPacket[];
   simulatedPing: number;
   connectedPeers: string[];
+
+  // WebXR & Meta Quest Integration
+  isXRSupported: boolean;
+  xrSupportedMode: 'immersive-ar' | 'immersive-vr' | null;
+  isXRPresenting: boolean;
+  xrRenderer: THREE.WebGLRenderer | null;
+  setXRRenderer: (renderer: THREE.WebGLRenderer | null) => void;
+  enterQuestXR: () => Promise<void>;
+  exitQuestXR: () => Promise<void>;
+  xrErrorMessage: string | null;
+  setXRErrorMessage: (msg: string | null) => void;
+  showQuestModal: boolean;
+  setShowQuestModal: (show: boolean) => void;
 }
 
 const DEFAULT_PRIMITIVES: ARPrimitive[] = [
@@ -255,6 +269,122 @@ export const ARProvider: React.FC<{ children: React.ReactNode }> = ({ children }
       status: 'ACKNOWLEDGED'
     }
   ]);
+
+  // WebXR & Meta Quest Integration State
+  const [isXRSupported, setIsXRSupported] = useState<boolean>(false);
+  const [xrSupportedMode, setXrSupportedMode] = useState<'immersive-ar' | 'immersive-vr' | null>(null);
+  const [isXRPresenting, setIsXRPresenting] = useState<boolean>(false);
+  const [activeXRSession, setActiveXRSession] = useState<any | null>(null);
+  const [xrRenderer, setXRRenderer] = useState<THREE.WebGLRenderer | null>(null);
+  const [xrErrorMessage, setXRErrorMessage] = useState<string | null>(null);
+  const [showQuestModal, setShowQuestModal] = useState<boolean>(false);
+
+  // Probe WebXR Device API capabilities on mount
+  useEffect(() => {
+    if (typeof navigator !== 'undefined' && 'xr' in navigator && (navigator as any).xr) {
+      const xr = (navigator as any).xr;
+      const probeXR = async () => {
+        try {
+          const ar = await xr.isSessionSupported('immersive-ar').catch(() => false);
+          if (ar) {
+            setIsXRSupported(true);
+            setXrSupportedMode('immersive-ar');
+            return;
+          }
+          const vr = await xr.isSessionSupported('immersive-vr').catch(() => false);
+          if (vr) {
+            setIsXRSupported(true);
+            setXrSupportedMode('immersive-vr');
+            return;
+          }
+          setIsXRSupported(false);
+          setXrSupportedMode(null);
+        } catch (e) {
+          console.warn('WebXR probe error:', e);
+          setIsXRSupported(false);
+        }
+      };
+      probeXR();
+    }
+  }, []);
+
+  const enterQuestXR = useCallback(async () => {
+    if (typeof navigator === 'undefined' || !('xr' in navigator) || !(navigator as any).xr) {
+      setShowQuestModal(true);
+      return;
+    }
+
+    if (!xrRenderer) {
+      setXRErrorMessage('Initializing 3D spatial canvas. Please tap again in 1 second.');
+      return;
+    }
+
+    const xr = (navigator as any).xr;
+
+    try {
+      setXRErrorMessage(null);
+      xrRenderer.xr.enabled = true;
+
+      const arSupported = await xr.isSessionSupported('immersive-ar').catch(() => false);
+      const vrSupported = await xr.isSessionSupported('immersive-vr').catch(() => false);
+
+      if (!arSupported && !vrSupported) {
+        setShowQuestModal(true);
+        return;
+      }
+
+      const mode = arSupported ? 'immersive-ar' : 'immersive-vr';
+      const sessionInit = {
+        optionalFeatures: ['local-floor', 'bounded-floor', 'hand-tracking']
+      };
+
+      const session = await xr.requestSession(mode, sessionInit);
+
+      if (mode === 'immersive-ar') {
+        xrRenderer.setClearColor(0x000000, 0);
+      }
+
+      try {
+        await xrRenderer.xr.setReferenceSpaceType('local-floor');
+      } catch {
+        try {
+          await xrRenderer.xr.setReferenceSpaceType('local');
+        } catch (refErr) {
+          console.warn('Reference space fallback:', refErr);
+        }
+      }
+
+      const onSessionEnded = () => {
+        setIsXRPresenting(false);
+        setActiveXRSession(null);
+        if (xrRenderer) {
+          xrRenderer.setClearColor(0x000000, 0);
+        }
+        session.removeEventListener('end', onSessionEnded);
+      };
+
+      session.addEventListener('end', onSessionEnded);
+      await xrRenderer.xr.setSession(session);
+      setActiveXRSession(session);
+      setIsXRPresenting(true);
+    } catch (err: any) {
+      console.error('WebXR session request failed:', err);
+      setXRErrorMessage(err.message || 'Could not start WebXR session. Please check headset permissions.');
+      setShowQuestModal(true);
+    }
+  }, [xrRenderer]);
+
+  const exitQuestXR = useCallback(async () => {
+    if (activeXRSession) {
+      try {
+        await activeXRSession.end();
+      } catch (e) {
+        console.warn('Session end error:', e);
+      }
+      setActiveXRSession(null);
+      setIsXRPresenting(false);
+    }
+  }, [activeXRSession]);
 
   // Persist current scene to localStorage
   useEffect(() => {
@@ -518,7 +648,18 @@ export const ARProvider: React.FC<{ children: React.ReactNode }> = ({ children }
         setSyncMode,
         networkPackets,
         simulatedPing,
-        connectedPeers
+        connectedPeers,
+        isXRSupported,
+        xrSupportedMode,
+        isXRPresenting,
+        xrRenderer,
+        setXRRenderer,
+        enterQuestXR,
+        exitQuestXR,
+        xrErrorMessage,
+        setXRErrorMessage,
+        showQuestModal,
+        setShowQuestModal
       }}
     >
       {children}

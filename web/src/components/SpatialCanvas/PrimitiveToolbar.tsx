@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { useAR } from '../../context/ARContext';
 import { PrimitiveType } from '../../types/ar';
+import { QuestXRButton } from './QuestXRControls';
 
 export const PrimitiveToolbar: React.FC = () => {
   const { 
@@ -93,6 +94,9 @@ export const PrimitiveToolbar: React.FC = () => {
           X-Ray
         </button>
       </div>
+
+      {/* Meta Quest WebXR 1-Click Button */}
+      <QuestXRButton variant="toolbar" />
 
       {/* Clear Scene Button */}
       {primitives.length > 0 && (

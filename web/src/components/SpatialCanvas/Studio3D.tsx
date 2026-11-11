@@ -4,6 +4,7 @@ import { OrbitControls, Grid, Float, ContactShadows, Text } from '@react-three/d
 import * as THREE from 'three';
 import { useAR } from '../../context/ARContext';
 import { ARPrimitive, MaterialType } from '../../types/ar';
+import { QuestXRModal, QuestXRButton } from './QuestXRControls';
 
 // Custom Mesh Renderer for an individual AR Primitive
 const PrimitiveMesh: React.FC<{
@@ -190,7 +191,9 @@ export const Studio3D: React.FC = () => {
     selectedId,
     selectPrimitive,
     shadingMode,
-    gridVisible
+    gridVisible,
+    setXRRenderer,
+    isXRPresenting
   } = useAR();
 
   return (
@@ -199,10 +202,14 @@ export const Studio3D: React.FC = () => {
         camera={{ position: [3.8, 3.2, 4.2], fov: 42 }}
         gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
         shadows
+        onCreated={({ gl }) => {
+          gl.xr.enabled = true;
+          setXRRenderer(gl);
+        }}
         onPointerMissed={() => selectPrimitive(null)}
       >
         {/* Calibrated Optical Studio Lighting */}
-        <ambientLight intensity={0.4} />
+        <ambientLight intensity={isXRPresenting ? 0.8 : 0.4} />
         <directionalLight
           position={[5, 8, 4]}
           intensity={1.2}
@@ -216,8 +223,8 @@ export const Studio3D: React.FC = () => {
         <pointLight position={[-4, 2, -3]} intensity={0.5} color="#00F5D4" />
         <pointLight position={[3, -1, 3]} intensity={0.3} color="#FB5607" />
 
-        {/* Studio Ground Grid */}
-        {gridVisible && (
+        {/* Studio Ground Grid (Subtle during AR passthrough) */}
+        {gridVisible && !isXRPresenting && (
           <Grid
             renderOrder={-1}
             position={[0, -0.01, 0]}
@@ -234,29 +241,34 @@ export const Studio3D: React.FC = () => {
         )}
 
         {/* Ambient Contact Shadows */}
-        <ContactShadows
-          position={[0, 0, 0]}
-          opacity={0.65}
-          scale={14}
-          blur={1.8}
-          far={6}
-          resolution={512}
-          color="#030406"
-        />
-
-        {/* Interactive Primitive Renders */}
-        {primitives.map((primitive) => (
-          <PrimitiveMesh
-            key={primitive.id}
-            primitive={primitive}
-            isSelected={primitive.id === selectedId}
-            shadingMode={shadingMode}
-            onSelect={() => selectPrimitive(primitive.id)}
+        {!isXRPresenting && (
+          <ContactShadows
+            position={[0, 0, 0]}
+            opacity={0.65}
+            scale={14}
+            blur={1.8}
+            far={6}
+            resolution={512}
+            color="#030406"
           />
-        ))}
+        )}
+
+        {/* Interactive Primitive Renders - Positioned at ergonomic desk/workbench height in XR */}
+        <group position={isXRPresenting ? [0, 1.0, -1.2] : [0, 0, 0]}>
+          {primitives.map((primitive) => (
+            <PrimitiveMesh
+              key={primitive.id}
+              primitive={primitive}
+              isSelected={primitive.id === selectedId}
+              shadingMode={shadingMode}
+              onSelect={() => selectPrimitive(primitive.id)}
+            />
+          ))}
+        </group>
 
         <OrbitControls
           makeDefault
+          enabled={!isXRPresenting}
           enableDamping
           dampingFactor={0.06}
           minDistance={1.8}
@@ -264,6 +276,9 @@ export const Studio3D: React.FC = () => {
           maxPolarAngle={Math.PI / 2 - 0.05} // prevent going underneath ground plane
         />
       </Canvas>
+
+      {/* Meta Quest WebXR Modal */}
+      <QuestXRModal />
     </div>
   );
 };
