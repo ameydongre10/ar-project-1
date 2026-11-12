@@ -40,12 +40,16 @@ interface ARContextType {
   simulatedPing: number;
   connectedPeers: string[];
 
-  // WebXR & Meta Quest Integration
+  // WebXR & VR/AR Integration
   isXRSupported: boolean;
   xrSupportedMode: 'immersive-ar' | 'immersive-vr' | null;
   isXRPresenting: boolean;
+  xrSessionMode: 'vr' | 'ar' | null;
   xrRenderer: THREE.WebGLRenderer | null;
   setXRRenderer: (renderer: THREE.WebGLRenderer | null) => void;
+  enterVR: () => Promise<void>;
+  enterAR: () => Promise<void>;
+  exitXR: () => Promise<void>;
   enterQuestXR: () => Promise<void>;
   exitQuestXR: () => Promise<void>;
   xrErrorMessage: string | null;
@@ -270,10 +274,11 @@ export const ARProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     }
   ]);
 
-  // WebXR & Meta Quest Integration State
+  // WebXR & VR/AR Integration State
   const [isXRSupported, setIsXRSupported] = useState<boolean>(false);
   const [xrSupportedMode, setXrSupportedMode] = useState<'immersive-ar' | 'immersive-vr' | null>(null);
   const [isXRPresenting, setIsXRPresenting] = useState<boolean>(false);
+  const [xrSessionMode, setXrSessionMode] = useState<'vr' | 'ar' | null>(null);
   const [activeXRSession, setActiveXRSession] = useState<any | null>(null);
   const [xrRenderer, setXRRenderer] = useState<THREE.WebGLRenderer | null>(null);
   const [xrErrorMessage, setXRErrorMessage] = useState<string | null>(null);
@@ -285,16 +290,11 @@ export const ARProvider: React.FC<{ children: React.ReactNode }> = ({ children }
       const xr = (navigator as any).xr;
       const probeXR = async () => {
         try {
-          const ar = await xr.isSessionSupported('immersive-ar').catch(() => false);
-          if (ar) {
-            setIsXRSupported(true);
-            setXrSupportedMode('immersive-ar');
-            return;
-          }
           const vr = await xr.isSessionSupported('immersive-vr').catch(() => false);
-          if (vr) {
+          const ar = await xr.isSessionSupported('immersive-ar').catch(() => false);
+          if (vr || ar) {
             setIsXRSupported(true);
-            setXrSupportedMode('immersive-vr');
+            setXrSupportedMode(vr ? 'immersive-vr' : 'immersive-ar');
             return;
           }
           setIsXRSupported(false);
@@ -308,7 +308,7 @@ export const ARProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     }
   }, []);
 
-  const enterQuestXR = useCallback(async () => {
+  const startXRSession = useCallback(async (preferredMode: 'immersive-vr' | 'immersive-ar') => {
     if (typeof navigator === 'undefined' || !('xr' in navigator) || !(navigator as any).xr) {
       setShowQuestModal(true);
       return;
@@ -349,17 +349,21 @@ export const ARProvider: React.FC<{ children: React.ReactNode }> = ({ children }
 
       renderer.xr.enabled = true;
 
-      const arSupported = await xr.isSessionSupported('immersive-ar').catch(() => false);
-      const vrSupported = await xr.isSessionSupported('immersive-vr').catch(() => false);
+      const targetSupported = await xr.isSessionSupported(preferredMode).catch(() => false);
+      let mode = preferredMode;
 
-      if (!arSupported && !vrSupported) {
-        setShowQuestModal(true);
-        return;
+      if (!targetSupported) {
+        const fallbackMode = preferredMode === 'immersive-vr' ? 'immersive-ar' : 'immersive-vr';
+        const fallbackSupported = await xr.isSessionSupported(fallbackMode).catch(() => false);
+        if (!fallbackSupported) {
+          setXRErrorMessage(`Neither VR nor AR session mode is supported on this browser/runtime.`);
+          setShowQuestModal(true);
+          return;
+        }
+        mode = fallbackMode;
       }
 
-      const mode = arSupported ? 'immersive-ar' : 'immersive-vr';
-
-      // Three.js r174 uses XRWebGLBinding which strictly requires 'layers' in optionalFeatures
+      // Three.js r174 uses XRWebGLBinding which requires 'layers' in optionalFeatures
       const sessionInit = {
         optionalFeatures: [
           'local-floor',
@@ -374,6 +378,8 @@ export const ARProvider: React.FC<{ children: React.ReactNode }> = ({ children }
 
       if (mode === 'immersive-ar') {
         renderer.setClearColor(0x000000, 0);
+      } else {
+        renderer.setClearColor(0x07080b, 1);
       }
 
       // Configure reference space with robust fallback (local-floor -> local)
@@ -394,6 +400,7 @@ export const ARProvider: React.FC<{ children: React.ReactNode }> = ({ children }
 
       const onSessionEnded = () => {
         setIsXRPresenting(false);
+        setXrSessionMode(null);
         setActiveXRSession(null);
         if (renderer) {
           renderer.setClearColor(0x000000, 0);
@@ -404,6 +411,7 @@ export const ARProvider: React.FC<{ children: React.ReactNode }> = ({ children }
       session.addEventListener('end', onSessionEnded);
       setActiveXRSession(session);
       setIsXRPresenting(true);
+      setXrSessionMode(mode === 'immersive-vr' ? 'vr' : 'ar');
     } catch (err: any) {
       console.error('WebXR session request failed:', err);
       setXRErrorMessage(err.message || 'Could not start WebXR session. Please check headset permissions.');
@@ -411,7 +419,11 @@ export const ARProvider: React.FC<{ children: React.ReactNode }> = ({ children }
     }
   }, [xrRenderer]);
 
-  const exitQuestXR = useCallback(async () => {
+  const enterVR = useCallback(() => startXRSession('immersive-vr'), [startXRSession]);
+  const enterAR = useCallback(() => startXRSession('immersive-ar'), [startXRSession]);
+  const enterQuestXR = useCallback(() => startXRSession('immersive-ar'), [startXRSession]);
+
+  const exitXR = useCallback(async () => {
     if (activeXRSession) {
       try {
         await activeXRSession.end();
@@ -420,8 +432,11 @@ export const ARProvider: React.FC<{ children: React.ReactNode }> = ({ children }
       }
       setActiveXRSession(null);
       setIsXRPresenting(false);
+      setXrSessionMode(null);
     }
   }, [activeXRSession]);
+
+  const exitQuestXR = exitXR;
 
   // Persist current scene to localStorage
   useEffect(() => {
@@ -689,8 +704,12 @@ export const ARProvider: React.FC<{ children: React.ReactNode }> = ({ children }
         isXRSupported,
         xrSupportedMode,
         isXRPresenting,
+        xrSessionMode,
         xrRenderer,
         setXRRenderer,
+        enterVR,
+        enterAR,
+        exitXR,
         enterQuestXR,
         exitQuestXR,
         xrErrorMessage,

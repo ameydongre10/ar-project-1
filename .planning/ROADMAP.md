@@ -32,3 +32,10 @@
 - Test responsive viewports (390px, 768px, 1024px, 1440px+).
 - Ensure build succeeds cleanly (`npm run build`).
 - Verify zero runtime console errors and document delivery in `README.md` and verification reports.
+
+### Phase 7: WebXR Virtual Reality (VR) Bridge & 6-DoF Controller Interaction
+- Separate session entry points for **ENTER VR** (`immersive-vr`) and **ENTER AR** (`immersive-ar`).
+- Implement 3D immersive VR cleanroom studio environment (infinite tech grid, dark dome, spatial workbench, lighting).
+- Implement 6-DoF VR controller raycasting, trigger selection, grip grab/translate, and controller haptic pulse feedback.
+- Add in-headset floating VR HUD showing active primitive telemetry and exit control.
+- Verify cross-device compatibility (Meta Quest, PCVR SteamVR, Apple Vision Pro, WebXR Emulator) and deploy to GitHub Pages.

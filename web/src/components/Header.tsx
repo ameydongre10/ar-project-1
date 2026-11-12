@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { GithubIcon } from './icons/GithubIcon';
 import { useAR } from '../context/ARContext';
+import { QuestXRButton } from './SpatialCanvas/QuestXRControls';
 
 export const Header: React.FC = () => {
   const { simulatedPing } = useAR();
@@ -74,6 +75,8 @@ export const Header: React.FC = () => {
 
         {/* Right Status Badges & GitHub Link */}
         <div className="hidden lg:flex items-center gap-3 font-mono text-xs">
+          <QuestXRButton variant="toolbar" />
+
           <div className="bg-obsidian-900/90 px-2.5 py-1 rounded-lg border-hairline flex items-center gap-2">
             <span className="text-[10px] text-titanium-500">FPS:</span>
             <span className="text-phosphor-teal font-medium tabular-data">{fps}</span>
